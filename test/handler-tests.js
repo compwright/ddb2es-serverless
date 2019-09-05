@@ -6,7 +6,7 @@ const sinon = require('sinon');
 const uuid = require('uuid');
 
 const formatEvent = require('./utils/ddb-stream-event-formatter');
-const lambdaHandler = require('../');
+const lambdaHandler = require('../lib');
 
 chai.use(chaiSubset);
 const expect = chai.expect;

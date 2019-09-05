@@ -1,27 +1,29 @@
 {
-  "name": "dynamo2es-lambda",
+  "name": "@compwright/ddb2es-serverless",
   "version": "2.0.0",
-  "description": "Configurable AWS Lambda handler to index documents from DynamoDB Streams in Amazon Elasticsearch",
+  "description": "Serverless handler to stream AWS DynamoDB to Elasticsearch (forked from dynamo2es-lambda)",
   "repository": {
     "type": "git",
-    "url": "https://github.com/AntonBazhal/dynamo2es-lambda.git"
+    "url": "https://github.com/compwright/dynamo2es-lambda.git"
   },
   "keywords": [
     "amazon",
     "aws",
     "aws-es",
+    "@elastic",
     "elasticsearch",
     "elasticsearch-js",
     "client",
+    "ddb",
     "dynamo",
     "dynamodb",
     "dynamodb-streams",
-    "http-aws-es",
     "lambda",
     "serverless",
-    "streams"
+    "streams",
+    "dynamo2es-lambda"
   ],
-  "main": "index.js",
+  "main": "lib/",
   "engines": {
     "node": ">=8"
   },
@@ -46,13 +48,13 @@
     ]
   },
   "author": {
-    "name": "Anton Bazhal",
-    "email": "am.bazhal@gmail.com"
+    "name": "Jonathon Hill",
+    "email": "jhill9693@gmail.com"
   },
   "contributors": [
     {
-      "name": "Jonathon Hill",
-      "email": "jhill9693@gmail.com"
+      "name": "Anton Bazhal",
+      "email": "am.bazhal@gmail.com"
     }
   ],
   "license": "MIT",
