@@ -1,6 +1,6 @@
-const joi = require('@hapi/joi');
+const joi = require('@hapi/joi')
 
-const FIELD = joi.string().min(1);
+const FIELD = joi.string().min(1)
 
 const ELASTICSEARCH_SCHEMA = joi.object({
   // One would expect to use .type(elasticsearch.Client) here, but it doesn't work.
@@ -12,7 +12,7 @@ const ELASTICSEARCH_SCHEMA = joi.object({
   bulk: joi.object({
     body: joi.any().forbidden()
   }).optional().unknown()
-}).unknown();
+}).unknown()
 
 const HANDLER_OPTIONS = joi
   .object({
@@ -42,7 +42,7 @@ const HANDLER_OPTIONS = joi
   .oxor('type', 'typeField')
   .without('index', 'indexPrefix')
   .with('indexPrefix', 'indexField')
-  .label('options');
+  .label('options')
 
 const EVENT = joi.object({
   Records: joi.array().items(joi.object({
@@ -53,12 +53,12 @@ const EVENT = joi.object({
       OldImage: joi.object()
     }).required()
   })).required()
-});
+})
 
-const VERSION = joi.number().min(0);
+const VERSION = joi.number().min(0)
 
 module.exports = {
   HANDLER_OPTIONS,
   EVENT,
   VERSION
-};
+}
