@@ -28,24 +28,6 @@
   "engines": {
     "node": ">=20"
   },
-  "scripts": {
-    "pretest": "standard --fix",
-    "test": "nyc mocha --opts ./mocha.opts ./test"
-  },
-  "nyc": {
-    "all": true,
-    "include": [
-      "src/**"
-    ],
-    "exclude": [
-      "**/test/**"
-    ],
-    "excludeNodeModules": true,
-    "reporter": [
-      "lcov",
-      "text-summary"
-    ]
-  },
   "author": {
     "name": "Jonathon Hill",
     "email": "jhill9693@gmail.com"
