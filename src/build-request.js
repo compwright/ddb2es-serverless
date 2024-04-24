@@ -1,10 +1,10 @@
-const pick = require('lodash/pick')
+import pick from 'lodash/pick.js'
 
-const schemas = require('./schemas')
-const UnknownEventNameError = require('./errors/UnknownEventNameError')
-const utils = require('./utils')
+import { VERSION } from './schemas.js'
+import { UnknownEventNameError } from './errors/UnknownEventNameError.js'
+import { assembleField, getField, validate, parseRecord } from './utils.js'
 
-function buildDoc (parsedRecord, options) {
+export function buildDoc (parsedRecord, options) {
   const doc = options.pickFields
     ? pick(parsedRecord.NewImage, options.pickFields)
     : parsedRecord.NewImage
@@ -15,7 +15,7 @@ function buildDoc (parsedRecord, options) {
   return doc
 }
 
-function buildAction (parsedRecord, options) {
+export function buildAction (parsedRecord, options) {
   const {
     separator = '.',
     indexPrefix = ''
@@ -25,19 +25,19 @@ function buildAction (parsedRecord, options) {
 
   const idResolver = options.idResolver || (() => {
     return options.idField
-      ? utils.assembleField(parsedRecord, options.idField, separator)
-      : utils.assembleField(parsedRecord, Object.keys(parsedRecord.Keys), separator)
+      ? assembleField(parsedRecord, options.idField, separator)
+      : assembleField(parsedRecord, Object.keys(parsedRecord.Keys), separator)
   })
 
   const id = idResolver(doc, parsedRecord.OldImage)
 
   const actionDescriptionObj = {
     _index: options.index ||
-      `${indexPrefix}${utils.assembleField(parsedRecord, options.indexField, separator)}`,
+      `${indexPrefix}${assembleField(parsedRecord, options.indexField, separator)}`,
     _type: options.type ||
       (
         options.typeField &&
-        utils.assembleField(parsedRecord, options.typeField, separator)
+        assembleField(parsedRecord, options.typeField, separator)
       ),
     _id: id
   }
@@ -48,14 +48,14 @@ function buildAction (parsedRecord, options) {
   }
 
   if (options.parentField) {
-    actionDescriptionObj.parent = utils.getField(parsedRecord, options.parentField)
+    actionDescriptionObj.parent = getField(parsedRecord, options.parentField)
   }
 
   if (options.versionResolver || options.versionField) {
     const version = options.versionResolver
       ? options.versionResolver(doc, parsedRecord.OldImage)
-      : utils.getField(parsedRecord, options.versionField)
-    utils.validate(version, schemas.VERSION.label(options.versionField || 'resolved version'))
+      : getField(parsedRecord, options.versionField)
+    validate(version, VERSION.label(options.versionField || 'resolved version'))
     actionDescriptionObj.version = version
     actionDescriptionObj.versionType = 'external'
   }
@@ -66,10 +66,10 @@ function buildAction (parsedRecord, options) {
   }
 }
 
-function buildRequest (event, context, options) {
+export function buildRequest (event, context, options) {
   return event.Records.reduce((acc, record) => {
     try {
-      const parsedRecord = utils.parseRecord(record)
+      const parsedRecord = parseRecord(record)
       const { action: actionDescriptionObj, doc } = buildAction(parsedRecord, options)
 
       if (doc) {
@@ -117,8 +117,3 @@ function buildRequest (event, context, options) {
     return acc
   }, { actions: [], meta: [] })
 }
-
-module.exports = buildRequest
-
-module.exports.buildDoc = buildDoc
-module.exports.buildAction = buildAction

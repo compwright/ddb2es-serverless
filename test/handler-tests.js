@@ -1,20 +1,19 @@
 /* eslint-env mocha */
 
-const chai = require('chai')
-const chaiSubset = require('chai-subset')
-const elasticsearch = require('elasticsearch')
-const lambdaTester = require('lambda-tester').noVersionCheck()
-const sinon = require('sinon')
-const uuid = require('uuid')
+import { expect, use } from 'chai'
+import chaiSubset from 'chai-subset'
+import { Client } from '@elastic/elasticsearch'
+import lambdaTester from 'lambda-tester'
+import sinon from 'sinon'
+import { v4 as uuidv4 } from 'uuid'
 
-const lambdaHandler = require('../src')
-const FieldNotFoundError = require('../src/errors/FieldNotFoundError')
-const UnknownEventNameError = require('../src/errors/UnknownEventNameError')
-const ValidationError = require('../src/errors/ValidationError')
-const formatEvent = require('./utils/ddb-stream-event-formatter')
+import lambdaHandler from '../src/index.js'
+import { FieldNotFoundError } from '../src/errors/FieldNotFoundError.js'
+import { UnknownEventNameError } from '../src/errors/UnknownEventNameError.js'
+import { ValidationError } from '../src/errors/ValidationError.js'
+import formatEvent from './utils/ddb-stream-event-formatter.js'
 
-chai.use(chaiSubset)
-const expect = chai.expect
+use(chaiSubset)
 
 function formatErrorMessage (messages) {
   return messages.join('. ')
@@ -48,7 +47,7 @@ describe('handler', function () {
       expect(() => lambdaHandler(testOptions))
         .to.throw(ValidationError)
         .with.property('message', formatErrorMessage([
-          'child "elasticsearch" fails because [child "client" fails because ["client" is required]]',
+          '"elasticsearch.client" is required',
           '"es" is not allowed',
           '"options" contains a conflict between optional exclusive peers [idField, idResolver]',
           '"options" contains a conflict between optional exclusive peers [versionField, versionResolver]',
@@ -80,21 +79,21 @@ describe('handler', function () {
       expect(() => lambdaHandler(testOptions))
         .to.throw(ValidationError)
         .with.property('message', formatErrorMessage([
-          'child "elasticsearch" fails because ["elasticsearch" is required]',
-          'child "beforeHook" fails because ["beforeHook" must be a Function]',
-          'child "afterHook" fails because ["afterHook" must be a Function]',
-          'child "recordErrorHook" fails because ["recordErrorHook" must be a Function]',
-          'child "errorHook" fails because ["errorHook" must be a Function]',
-          'child "transformRecordHook" fails because ["transformRecordHook" must be a Function]',
-          'child "separator" fails because ["separator" must be a string]',
-          'child "idField" fails because ["idField" must be a string, "idField" must be an array]',
-          'child "indexField" fails because ["indexField" must be a string, "indexField" must be an array]',
-          'child "indexPrefix" fails because ["indexPrefix" must be a string]',
-          'child "typeField" fails because ["typeField" must be a string, "typeField" must be an array]',
-          'child "parentField" fails because ["parentField" must be a string]',
-          'child "pickFields" fails because ["pickFields" must be a string, "pickFields" must be an array]',
-          'child "versionField" fails because ["versionField" must be a string]',
-          'child "retryOptions" fails because ["retryOptions" must be an object]',
+          '"elasticsearch" is required',
+          '"beforeHook" must be of type function',
+          '"afterHook" must be of type function',
+          '"recordErrorHook" must be of type function',
+          '"errorHook" must be of type function',
+          '"transformRecordHook" must be of type function',
+          '"separator" must be a string',
+          '"idField" must be one of [string, array]',
+          '"indexField" must be one of [string, array]',
+          '"indexPrefix" must be a string',
+          '"typeField" must be one of [string, array]',
+          '"parentField" must be a string',
+          '"pickFields" must be one of [string, array]',
+          '"versionField" must be a string',
+          '"retryOptions" must be of type object',
           '"es" is not allowed'
         ]))
     })
@@ -111,11 +110,11 @@ describe('handler', function () {
       expect(() => lambdaHandler(testOptions))
         .to.throw(ValidationError)
         .with.property('message', formatErrorMessage([
-          'child "elasticsearch" fails because ["elasticsearch" must be an object]',
-          'child "idResolver" fails because ["idResolver" must be a Function]',
-          'child "index" fails because ["index" must be a string]',
-          'child "type" fails because ["type" must be a string]',
-          'child "versionResolver" fails because ["versionResolver" must be a Function]'
+          '"elasticsearch" must be of type object',
+          '"idResolver" must be of type function',
+          '"index" must be a string',
+          '"type" must be a string',
+          '"versionResolver" must be of type function'
         ]))
     })
 
@@ -127,7 +126,7 @@ describe('handler', function () {
       expect(() => lambdaHandler(testOptions))
         .to.throw(ValidationError)
         .with.property('message', formatErrorMessage([
-          'child "elasticsearch" fails because ["elasticsearch" is required]',
+          '"elasticsearch" is required',
           '"options" must contain at least one of [index, indexField]',
           '"indexPrefix" missing required peer "indexField"'
         ]))
@@ -145,7 +144,8 @@ describe('handler', function () {
       expect(() => lambdaHandler(testOptions))
         .to.throw(ValidationError)
         .with.property('message', formatErrorMessage([
-          'child "elasticsearch" fails because [child "client" fails because ["client" is required], child "bulk" fails because ["bulk" must be an object]]'
+          '"elasticsearch.client" is required',
+          '"elasticsearch.bulk" must be of type object'
         ]))
     })
 
@@ -163,14 +163,15 @@ describe('handler', function () {
       expect(() => lambdaHandler(testOptions))
         .to.throw(ValidationError)
         .with.property('message', formatErrorMessage([
-          'child "elasticsearch" fails because [child "client" fails because ["client" is required], child "bulk" fails because [child "body" fails because ["body" is not allowed]]]'
+          '"elasticsearch.client" is required',
+          '"elasticsearch.bulk.body" is not allowed'
         ]))
     })
 
     it('should throw when unknown options passed', function () {
       const testOptions = {
         elasticsearch: {
-          client: new elasticsearch.Client()
+          client: new Client({ node: 'https://foo' })
         },
         junk: 'junk',
         index: 'index',
@@ -190,7 +191,7 @@ describe('handler', function () {
       let hookCalled = false
       const testEvent = formatEvent()
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -220,7 +221,7 @@ describe('handler', function () {
       }
 
       let hookCalled = false
-      const testItemKeys = { id: uuid.v4() }
+      const testItemKeys = { id: uuidv4() }
       const testItemData = { data: 'some data', nestedData: { data: 'nested data' } }
       const testEvent = formatEvent({
         name: 'INSERT',
@@ -228,7 +229,7 @@ describe('handler', function () {
         new: testItemData
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -276,9 +277,9 @@ describe('handler', function () {
 
     it('should use return value from "afterHook" when provided', function () {
       const testEvent = formatEvent()
-      const testHookResult = uuid.v4()
+      const testHookResult = uuidv4()
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -304,7 +305,7 @@ describe('handler', function () {
 
       const handler = lambdaHandler({
         elasticsearch: {
-          client: new elasticsearch.Client()
+          client: new Client({ node: 'https://foo' })
         },
         recordErrorHook: (event, context, err) => {
           hookCalled = true
@@ -329,11 +330,11 @@ describe('handler', function () {
 
     it('should call "errorHook" when provided, return result and should not throw', function () {
       let hookCalled = false
-      const testResult = uuid.v4()
+      const testResult = uuidv4()
       const testEvent = formatEvent()
       const testError = new Error('Winter is coming!')
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -376,7 +377,7 @@ describe('handler', function () {
         old: oldRecord
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -416,7 +417,7 @@ describe('handler', function () {
         }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -445,8 +446,8 @@ describe('handler', function () {
   describe('separator', function () {
     it('should use separator when provided', function () {
       const testSeparator = '~'
-      const testField1 = uuid.v4()
-      const testField2 = uuid.v4()
+      const testField1 = uuidv4()
+      const testField2 = uuidv4()
       const testEvent = formatEvent({
         name: 'INSERT',
         keys: {
@@ -455,7 +456,7 @@ describe('handler', function () {
         }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -483,8 +484,8 @@ describe('handler', function () {
     })
 
     it('should support empty separator', function () {
-      const testField1 = uuid.v4()
-      const testField2 = uuid.v4()
+      const testField1 = uuidv4()
+      const testField2 = uuidv4()
       const testEvent = formatEvent({
         name: 'INSERT',
         keys: {
@@ -493,7 +494,7 @@ describe('handler', function () {
         }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -523,20 +524,20 @@ describe('handler', function () {
 
   describe('id', function () {
     it('should use "idResolver" when provided', function () {
-      const testField = uuid.v4()
+      const testField = uuidv4()
       const testEvent = formatEvent({
         name: 'INSERT',
         keys: {
           field: testField,
-          otherField: uuid.v4()
+          otherField: uuidv4()
         },
         new: {
           field: testField,
-          otherField: uuid.v4()
+          otherField: uuidv4()
         }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -558,16 +559,16 @@ describe('handler', function () {
     })
 
     it('should use "idField" when provided (single field)', function () {
-      const testField = uuid.v4()
+      const testField = uuidv4()
       const testEvent = formatEvent({
         name: 'INSERT',
         keys: {
           field: testField,
-          otherField: uuid.v4()
+          otherField: uuidv4()
         }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -589,18 +590,18 @@ describe('handler', function () {
     })
 
     it('should use "idField" when provided (multiple fields)', function () {
-      const testField1 = uuid.v4()
-      const testField2 = uuid.v4()
+      const testField1 = uuidv4()
+      const testField2 = uuidv4()
       const testEvent = formatEvent({
         name: 'INSERT',
         keys: {
           field1: testField1,
           field2: testField2,
-          field3: uuid.v4()
+          field3: uuidv4()
         }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -625,7 +626,7 @@ describe('handler', function () {
       const testEvent = formatEvent()
       const handler = lambdaHandler({
         elasticsearch: {
-          client: new elasticsearch.Client()
+          client: new Client({ node: 'https://foo' })
         },
         idField: 'notFoundField',
         index: 'index',
@@ -642,8 +643,8 @@ describe('handler', function () {
     })
 
     it('should concatenate record keys when "idField" not provided', function () {
-      const testField1 = uuid.v4()
-      const testField2 = uuid.v4()
+      const testField1 = uuidv4()
+      const testField2 = uuidv4()
       const testEvent = formatEvent({
         name: 'INSERT',
         keys: {
@@ -652,7 +653,7 @@ describe('handler', function () {
         }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -675,10 +676,10 @@ describe('handler', function () {
 
   describe('index', function () {
     it('should use "index" value when provided', function () {
-      const testIndex = uuid.v4()
+      const testIndex = uuidv4()
       const testEvent = formatEvent({ name: 'INSERT' })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -699,13 +700,13 @@ describe('handler', function () {
     })
 
     it('should use "indexField" when provided (single field)', function () {
-      const testField = uuid.v4()
+      const testField = uuidv4()
       const testEvent = formatEvent({
         name: 'INSERT',
         keys: { field: testField }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -726,8 +727,8 @@ describe('handler', function () {
     })
 
     it('should use "indexField" when provided (multiple fields)', function () {
-      const testField1 = uuid.v4()
-      const testField2 = uuid.v4()
+      const testField1 = uuidv4()
+      const testField2 = uuidv4()
       const testEvent = formatEvent({
         name: 'INSERT',
         keys: {
@@ -736,7 +737,7 @@ describe('handler', function () {
         }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -757,14 +758,14 @@ describe('handler', function () {
     })
 
     it('should use "indexPrefix" when provided', function () {
-      const testField = uuid.v4()
-      const testIndexPrefix = uuid.v4()
+      const testField = uuidv4()
+      const testIndexPrefix = uuidv4()
       const testEvent = formatEvent({
         name: 'INSERT',
         keys: { field: testField }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -790,7 +791,7 @@ describe('handler', function () {
       const testEvent = formatEvent()
       const handler = lambdaHandler({
         elasticsearch: {
-          client: new elasticsearch.Client()
+          client: new Client({ node: 'https://foo' })
         },
         indexField: 'notFoundField',
         type: 'type'
@@ -808,10 +809,10 @@ describe('handler', function () {
 
   describe('type', function () {
     it('should use "type" value when provided', function () {
-      const testType = uuid.v4()
+      const testType = uuidv4()
       const testEvent = formatEvent({ name: 'INSERT' })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -832,13 +833,13 @@ describe('handler', function () {
     })
 
     it('should use "typeField" when provided (single field)', function () {
-      const testField = uuid.v4()
+      const testField = uuidv4()
       const testEvent = formatEvent({
         name: 'INSERT',
         keys: { field: testField }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -859,8 +860,8 @@ describe('handler', function () {
     })
 
     it('should use "typeField" when provided (multiple fields)', function () {
-      const testField1 = uuid.v4()
-      const testField2 = uuid.v4()
+      const testField1 = uuidv4()
+      const testField2 = uuidv4()
       const testEvent = formatEvent({
         name: 'INSERT',
         keys: {
@@ -869,7 +870,7 @@ describe('handler', function () {
         }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -893,7 +894,7 @@ describe('handler', function () {
       const testEvent = formatEvent()
       const handler = lambdaHandler({
         elasticsearch: {
-          client: new elasticsearch.Client()
+          client: new Client({ node: 'https://foo' })
         },
         index: 'index',
         typeField: 'notFoundField'
@@ -911,16 +912,16 @@ describe('handler', function () {
 
   describe('parentField', function () {
     it('should use "parentField" when provided', function () {
-      const testField = uuid.v4()
+      const testField = uuidv4()
       const testEvent = formatEvent({
         name: 'INSERT',
         new: {
           field: testField,
-          otherField: uuid.v4()
+          otherField: uuidv4()
         }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -945,7 +946,7 @@ describe('handler', function () {
       const testEvent = formatEvent()
       const handler = lambdaHandler({
         elasticsearch: {
-          client: new elasticsearch.Client()
+          client: new Client({ node: 'https://foo' })
         },
         index: 'index',
         type: 'type',
@@ -965,15 +966,15 @@ describe('handler', function () {
   describe('pickFields', function () {
     it('should use "pickFields" when provided (single field)', function () {
       const testDoc = {
-        field1: uuid.v4(),
-        field2: uuid.v4()
+        field1: uuidv4(),
+        field2: uuidv4()
       }
       const testEvent = formatEvent({
         name: 'INSERT',
         new: testDoc
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -997,16 +998,16 @@ describe('handler', function () {
 
     it('should use "pickFields" when provided (multiple fields)', function () {
       const testDoc = {
-        field1: uuid.v4(),
-        field2: uuid.v4(),
-        field3: uuid.v4()
+        field1: uuidv4(),
+        field2: uuidv4(),
+        field3: uuidv4()
       }
       const testEvent = formatEvent({
         name: 'INSERT',
         new: testDoc
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -1030,8 +1031,8 @@ describe('handler', function () {
 
     it('should use "pickFields" when provided (dot notation)', function () {
       const testDoc = {
-        field1: uuid.v4(),
-        field2: uuid.v4(),
+        field1: uuidv4(),
+        field2: uuidv4(),
         foo: {
           bar: 'baz'
         }
@@ -1041,7 +1042,7 @@ describe('handler', function () {
         new: testDoc
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -1073,8 +1074,8 @@ describe('handler', function () {
 
     it('should pick all the fields when "pickFields" not provided', function () {
       const testDoc = {
-        field1: uuid.v4(),
-        field2: uuid.v4()
+        field1: uuidv4(),
+        field2: uuidv4()
       }
       const testEvent = formatEvent({
         name: 'INSERT',
@@ -1084,7 +1085,7 @@ describe('handler', function () {
         }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -1109,7 +1110,7 @@ describe('handler', function () {
   describe('version', function () {
     it('should use field`s value when "versionField" is provided', function () {
       const testDoc = {
-        field1: uuid.v4(),
+        field1: uuidv4(),
         field2: 1
       }
       const testEvent = formatEvent({
@@ -1120,7 +1121,7 @@ describe('handler', function () {
         }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -1147,7 +1148,7 @@ describe('handler', function () {
 
     it('should use the resolved value when "versionResolver" is provided', function () {
       const testDoc = {
-        field1: uuid.v4(),
+        field1: uuidv4(),
         field2: 'asdf',
         v: 3
       }
@@ -1159,7 +1160,7 @@ describe('handler', function () {
         }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -1186,7 +1187,7 @@ describe('handler', function () {
 
     it('should support 0 version', function () {
       const testDoc = {
-        field1: uuid.v4(),
+        field1: uuidv4(),
         field2: 0
       }
       const testEvent = formatEvent({
@@ -1197,7 +1198,7 @@ describe('handler', function () {
         }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -1224,7 +1225,7 @@ describe('handler', function () {
 
     it('should not set "version" and "versionType" fields when neither "versionField" nor "versionResolver" is provided', function () {
       const testDoc = {
-        field1: uuid.v4()
+        field1: uuidv4()
       }
       const testEvent = formatEvent({
         name: 'INSERT',
@@ -1234,7 +1235,7 @@ describe('handler', function () {
         }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -1259,7 +1260,7 @@ describe('handler', function () {
       const testEvent = formatEvent()
       const handler = lambdaHandler({
         elasticsearch: {
-          client: new elasticsearch.Client()
+          client: new Client({ node: 'https://foo' })
         },
         index: 'index',
         type: 'type',
@@ -1282,13 +1283,13 @@ describe('handler', function () {
           _version: '1'
         },
         keys: {
-          key: uuid.v4()
+          key: uuidv4()
         }
       })
 
       const handler = lambdaHandler({
         elasticsearch: {
-          client: new elasticsearch.Client()
+          client: new Client({ node: 'https://foo' })
         },
         index: 'index',
         type: 'type',
@@ -1311,13 +1312,13 @@ describe('handler', function () {
           _version: '1'
         },
         keys: {
-          key: uuid.v4()
+          key: uuidv4()
         }
       })
 
       const handler = lambdaHandler({
         elasticsearch: {
-          client: new elasticsearch.Client()
+          client: new Client({ node: 'https://foo' })
         },
         index: 'index',
         type: 'type',
@@ -1335,7 +1336,7 @@ describe('handler', function () {
 
     it('should increment version for "REMOVE" event', function () {
       const testDoc = {
-        field1: uuid.v4(),
+        field1: uuidv4(),
         field2: 1
       }
       const testEvent = formatEvent({
@@ -1346,7 +1347,7 @@ describe('handler', function () {
         }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -1380,7 +1381,7 @@ describe('handler', function () {
 
       const handler = lambdaHandler({
         elasticsearch: {
-          client: new elasticsearch.Client()
+          client: new Client({ node: 'https://foo' })
         },
         index: 'index',
         type: 'type'
@@ -1391,9 +1392,7 @@ describe('handler', function () {
         .expectError(err => {
           expect(err)
             .to.be.an.instanceOf(ValidationError)
-            .with.property('message', 'child "Records" fails because ["Records" at ' +
-              'position 0 fails because [child "eventName" fails because ["eventName" ' +
-              'is required], child "dynamodb" fails because ["dynamodb" is required]]]')
+            .with.property('message', '"Records[0].eventName" is required. "Records[0].dynamodb" is required')
         })
     })
 
@@ -1405,7 +1404,7 @@ describe('handler', function () {
 
       const handler = lambdaHandler({
         elasticsearch: {
-          client: new elasticsearch.Client()
+          client: new Client({ node: 'https://foo' })
         },
         index: 'index',
         type: 'type',
@@ -1428,7 +1427,7 @@ describe('handler', function () {
       testEvent.Records[0].junk = 'junk'
       testEvent.Records[0].dynamodb.junk = 'junk'
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -1447,8 +1446,8 @@ describe('handler', function () {
   describe('event names (types)', function () {
     it('should support "INSERT" event', function () {
       const testDoc = {
-        field1: uuid.v4(),
-        field2: uuid.v4()
+        field1: uuidv4(),
+        field2: uuidv4()
       }
       const testEvent = formatEvent({
         name: 'INSERT',
@@ -1458,7 +1457,7 @@ describe('handler', function () {
         }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -1485,8 +1484,8 @@ describe('handler', function () {
 
     it('should support "MODIFY" event', function () {
       const testDoc = {
-        field1: uuid.v4(),
-        field2: uuid.v4()
+        field1: uuidv4(),
+        field2: uuidv4()
       }
       const testEvent = formatEvent({
         name: 'MODIFY',
@@ -1496,7 +1495,7 @@ describe('handler', function () {
         }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -1523,8 +1522,8 @@ describe('handler', function () {
 
     it('should support "REMOVE" event', function () {
       const testDoc = {
-        field1: uuid.v4(),
-        field2: uuid.v4()
+        field1: uuidv4(),
+        field2: uuidv4()
       }
       const testEvent = formatEvent({
         name: 'REMOVE',
@@ -1534,7 +1533,7 @@ describe('handler', function () {
         }
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -1565,7 +1564,7 @@ describe('handler', function () {
 
       const handler = lambdaHandler({
         elasticsearch: {
-          client: new elasticsearch.Client()
+          client: new Client({ node: 'https://foo' })
         },
         index: 'index',
         type: 'type'
@@ -1588,7 +1587,7 @@ describe('handler', function () {
 
       const handler = lambdaHandler({
         elasticsearch: {
-          client: new elasticsearch.Client()
+          client: new Client({ node: 'https://foo' })
         },
         index: 'index',
         type: 'type',
@@ -1613,10 +1612,10 @@ describe('handler', function () {
     })
 
     it('should omit _type from insert operation if type options are not given', function () {
-      const testKeys = { id: uuid.v4() }
+      const testKeys = { id: uuidv4() }
       const testEvent = formatEvent({ name: 'INSERT', keys: testKeys })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -1646,14 +1645,14 @@ describe('handler', function () {
 
   describe('events count', function () {
     it('should support single event', function () {
-      const testDoc = { field: uuid.v4() }
+      const testDoc = { field: uuidv4() }
       const testEvent = formatEvent({
         name: 'INSERT',
         keys: { field: testDoc.field },
         newImage: testDoc
       })
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -1679,8 +1678,8 @@ describe('handler', function () {
     })
 
     it('should support multiple events', function () {
-      const testDoc1 = { field: uuid.v4() }
-      const testDoc2 = { field: uuid.v4() }
+      const testDoc1 = { field: uuidv4() }
+      const testDoc2 = { field: uuidv4() }
       const testEvent = formatEvent([
         {
           name: 'INSERT',
@@ -1694,7 +1693,7 @@ describe('handler', function () {
         }
       ])
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -1724,13 +1723,13 @@ describe('handler', function () {
 
   describe('bulk options', function () {
     it('should pass bulk options to the request when provided', function () {
-      const testKeys = { id: uuid.v4() }
+      const testKeys = { id: uuidv4() }
       const testEvent = formatEvent({ name: 'INSERT', keys: testKeys })
       const testBulkOptions = {
         refresh: 'true'
       }
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: {
@@ -1769,7 +1768,7 @@ describe('handler', function () {
       const testEvent = formatEvent()
       const testError = new Error('indexing error')
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },
@@ -1792,7 +1791,7 @@ describe('handler', function () {
       const testError = new Error('indexing error')
       const retryCount = 2
 
-      const client = new elasticsearch.Client()
+      const client = new Client({ node: 'https://foo' })
 
       const handler = lambdaHandler({
         elasticsearch: { client },

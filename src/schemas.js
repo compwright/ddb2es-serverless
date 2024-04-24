@@ -1,4 +1,4 @@
-const joi = require('@hapi/joi')
+import joi from 'joi'
 
 const FIELD = joi.string().min(1)
 
@@ -14,7 +14,7 @@ const ELASTICSEARCH_SCHEMA = joi.object({
   }).optional().unknown()
 }).unknown()
 
-const HANDLER_OPTIONS = joi
+export const HANDLER_OPTIONS = joi
   .object({
     elasticsearch: ELASTICSEARCH_SCHEMA.required(),
     beforeHook: joi.func(),
@@ -44,7 +44,7 @@ const HANDLER_OPTIONS = joi
   .with('indexPrefix', 'indexField')
   .label('options')
 
-const EVENT = joi.object({
+export const EVENT = joi.object({
   Records: joi.array().items(joi.object({
     eventName: joi.string().required(),
     dynamodb: joi.object({
@@ -55,10 +55,4 @@ const EVENT = joi.object({
   })).required()
 })
 
-const VERSION = joi.number().min(0)
-
-module.exports = {
-  HANDLER_OPTIONS,
-  EVENT,
-  VERSION
-}
+export const VERSION = joi.number().min(0)

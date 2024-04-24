@@ -6,6 +6,7 @@
     "type": "git",
     "url": "https://github.com/compwright/dynamo2es-lambda.git"
   },
+  "type": "module",
   "keywords": [
     "amazon",
     "aws",
@@ -25,7 +26,7 @@
   ],
   "main": "src/",
   "engines": {
-    "node": ">=8"
+    "node": ">=20"
   },
   "scripts": {
     "pretest": "standard --fix",

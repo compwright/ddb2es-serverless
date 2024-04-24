@@ -1,13 +1,13 @@
-const retry = require('p-retry')
+import retry from 'p-retry'
 
-const schemas = require('./schemas')
-const utils = require('./utils')
-const buildRequest = require('./build-request')
+import { HANDLER_OPTIONS, EVENT } from './schemas.js'
+import { validate } from './utils.js'
+import { buildRequest } from './build-request.js'
 
 const DEFAULT_RETRY_COUNT = 0
 
-module.exports = function (options = {}) {
-  utils.validate(options, schemas.HANDLER_OPTIONS)
+export default (options = {}) => {
+  validate(options, HANDLER_OPTIONS)
 
   const {
     elasticsearch: {
@@ -22,7 +22,7 @@ module.exports = function (options = {}) {
         options.beforeHook(event, context)
       }
 
-      utils.validate(event, schemas.EVENT, { allowUnknown: true })
+      validate(event, EVENT, { allowUnknown: true })
 
       const parsedEvent = buildRequest(event, context, options)
 
@@ -35,10 +35,9 @@ module.exports = function (options = {}) {
       }
 
       const result = await retry(
-        (next) => {
+        () => {
           return esclient.bulk({ ...bulkOpts, body: parsedEvent.actions })
             .then(result => ({ result, meta: parsedEvent.meta }))
-            .catch(next)
         },
         {
           retries: DEFAULT_RETRY_COUNT,

@@ -1,7 +1,7 @@
-const DynamoDB = require('aws-sdk/clients/dynamodb')
-const uuid = require('uuid')
+import { v4 as uuidv4 } from 'uuid'
+import { marshall } from '@aws-sdk/util-dynamodb'
 
-module.exports = function (records) {
+export default (records) => {
   if (!records) {
     records = [{}] // eslint-disable-line no-param-reassign
   }
@@ -13,7 +13,7 @@ module.exports = function (records) {
   return {
     Records: records.map(record => {
       const eventName = record.name || 'INSERT'
-      const keys = record.keys || { id: uuid.v4() }
+      const keys = record.keys || { id: uuidv4() }
       const newImage = eventName === 'REMOVE' ? null : { ...record.new, ...keys }
       const oldImage = eventName === 'INSERT' ? null : { ...keys, ...record.old }
 
@@ -21,9 +21,9 @@ module.exports = function (records) {
         eventName,
         eventSource: 'aws:dynamodb',
         dynamodb: {
-          Keys: DynamoDB.Converter.marshall(keys),
-          NewImage: newImage ? DynamoDB.Converter.marshall(newImage) : undefined,
-          OldImage: oldImage ? DynamoDB.Converter.marshall(oldImage) : undefined,
+          Keys: marshall(keys),
+          NewImage: newImage ? marshall(newImage) : undefined,
+          OldImage: oldImage ? marshall(oldImage) : undefined,
           StreamViewType: 'NEW_AND_OLD_IMAGES'
         }
       }
