@@ -1,6 +1,6 @@
 {
   "name": "@compwright/ddb2es-serverless",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "Serverless handler to stream AWS DynamoDB to Elasticsearch (forked from dynamo2es-lambda)",
   "repository": {
     "type": "git",
