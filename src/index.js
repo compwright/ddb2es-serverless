@@ -16,7 +16,7 @@ export default (options = {}) => {
     }
   } = options
 
-  async function handle (event, context) {
+  return async function handle (event, context) {
     try {
       if (options.beforeHook) {
         options.beforeHook(event, context)
@@ -57,16 +57,6 @@ export default (options = {}) => {
       } else {
         throw err
       }
-    }
-  }
-
-  return (event, context, callback) => {
-    if (callback) {
-      handle(event, context)
-        .then(res => callback(null, res))
-        .catch(callback)
-    } else {
-      return handle(event, context)
     }
   }
 }
