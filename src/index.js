@@ -19,7 +19,7 @@ export default (options = {}) => {
   return async function handle (event, context) {
     try {
       if (options.beforeHook) {
-        options.beforeHook(event, context)
+        await options.beforeHook(event, context)
       }
 
       validate(event, EVENT, { allowUnknown: true })

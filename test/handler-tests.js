@@ -215,6 +215,32 @@ describe('handler', function () {
         })
     })
 
+    it('should allow "beforeHook" to be a promise', function () {
+      let hookCalled = false
+      const testEvent = formatEvent()
+
+      const client = new Client({ node: 'https://foo' })
+
+      const handler = lambdaHandler({
+        elasticsearch: { client },
+        beforeHook: async () => {
+          // Force hook to bottom of event loop to test promise.
+          await new Promise(resolve => setTimeout(resolve, null))
+          hookCalled = true
+        },
+        index: 'index',
+        type: 'type'
+      })
+
+      sinon.stub(client, 'bulk').resolves()
+
+      return lambdaTester(handler)
+        .event(testEvent)
+        .expectResult(() => {
+          expect(hookCalled).to.be.equal(true)
+        })
+    })
+
     it('should call "afterHook" when provided', function () {
       const testResult = {
         meaningOfLife: 42
