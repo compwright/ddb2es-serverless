@@ -24,7 +24,7 @@ export default (options = {}) => {
 
       validate(event, EVENT, { allowUnknown: true })
 
-      const parsedEvent = buildRequest(event, context, options)
+      const parsedEvent = await buildRequest(event, context, options)
 
       if (parsedEvent.actions.length === 0) {
         return {

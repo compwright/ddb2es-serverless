@@ -4,24 +4,24 @@ import { VERSION } from './schemas.js'
 import { UnknownEventNameError } from './errors/UnknownEventNameError.js'
 import { assembleField, getField, validate, parseRecord } from './utils.js'
 
-export function buildDoc (parsedRecord, options) {
+export async function buildDoc (parsedRecord, options) {
   const doc = options.pickFields
     ? pick(parsedRecord.NewImage, options.pickFields)
     : parsedRecord.NewImage
 
   if (options.transformRecordHook) {
-    return options.transformRecordHook(doc, parsedRecord.OldImage)
+    return await options.transformRecordHook(doc, parsedRecord.OldImage)
   }
   return doc
 }
 
-export function buildAction (parsedRecord, options) {
+export async function buildAction (parsedRecord, options) {
   const {
     separator = '.',
     indexPrefix = ''
   } = options
 
-  const doc = buildDoc(parsedRecord, options)
+  const doc = await buildDoc(parsedRecord, options)
 
   const idResolver = options.idResolver || (() => {
     return options.idField
@@ -66,11 +66,13 @@ export function buildAction (parsedRecord, options) {
   }
 }
 
-export function buildRequest (event, context, options) {
-  return event.Records.reduce((acc, record) => {
+export async function buildRequest (event, context, options) {
+  return await event.Records.reduce(async (acc, record) => {
+    acc = await acc // eslint-disable-line no-param-reassign
+
     try {
       const parsedRecord = parseRecord(record)
-      const { action: actionDescriptionObj, doc } = buildAction(parsedRecord, options)
+      const { action: actionDescriptionObj, doc } = await buildAction(parsedRecord, options)
 
       if (doc) {
         let action
@@ -108,7 +110,7 @@ export function buildRequest (event, context, options) {
       }
     } catch (err) {
       if (options.recordErrorHook) {
-        options.recordErrorHook(event, context, err)
+        await options.recordErrorHook(event, context, err)
       } else {
         throw err
       }
